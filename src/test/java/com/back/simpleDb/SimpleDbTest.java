@@ -98,7 +98,6 @@ public class SimpleDbTest {
   }
 
 //
-//
 //  @Test
 //  @DisplayName("update")
 //  public void t002() {

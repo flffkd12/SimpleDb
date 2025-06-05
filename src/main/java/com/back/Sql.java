@@ -3,6 +3,7 @@ package com.back;
 import com.back.simpleDb.SimpleDb;
 import java.sql.*;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 public class Sql {
@@ -15,14 +16,9 @@ public class Sql {
     this.simpleDb = simpleDb;
   }
 
-  public Sql append(String sql) {
-    sqlBuilder.append(sql).append(" ");
-    return this;
-  }
-
-  public Sql append(String sql, Object bindParam) {
-    sqlBuilder.append(sql);
-    bindParams.add(bindParam);
+  public Sql append(String sql, Object... bindParam) {
+    sqlBuilder.append(sql).append("\n");
+    bindParams.addAll(Arrays.asList(bindParam));
     return this;
   }
 
@@ -53,4 +49,6 @@ public class Sql {
     }
     return 0;
   }
+
+
 }
