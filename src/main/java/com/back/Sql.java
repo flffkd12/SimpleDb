@@ -22,11 +22,11 @@ public class Sql {
   }
 
   public long insert() {
-    String sql = sqlBuilder.toString();
     try (
         Connection conn = DriverManager
             .getConnection(simpleDb.getUrl(), simpleDb.getUser(), simpleDb.getPassword());
-        PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)
+        PreparedStatement ps = conn.prepareStatement(sqlBuilder.toString(),
+            Statement.RETURN_GENERATED_KEYS)
     ) {
       for (int i = 0; i < bindParams.size(); i++) {
         ps.setObject(i + 1, bindParams.get(i));
@@ -50,14 +50,39 @@ public class Sql {
     return 0;
   }
 
+  public Map<String, Object> selectRow() {
+    Map<String, Object> row = new HashMap<>();
+
+    try (
+        Connection conn = DriverManager
+            .getConnection(simpleDb.getUrl(), simpleDb.getUser(), simpleDb.getPassword());
+        PreparedStatement ps = conn.prepareStatement(sqlBuilder.toString());
+        ResultSet rs = ps.executeQuery()
+    ) {
+      if (rs.next()) {
+        ResultSetMetaData meta = rs.getMetaData();
+        int colCnt = meta.getColumnCount();
+
+        for (int i = 1; i <= colCnt; i++) {
+          row.put(meta.getColumnName(i), rs.getObject(i));
+        }
+      }
+    } catch (SQLTimeoutException e) {
+
+    } catch (SQLException e) {
+
+    }
+
+    return row;
+  }
+
   public List<Map<String, Object>> selectRows() {
-    String sql = sqlBuilder.toString();
     List<Map<String, Object>> rows = new ArrayList<>();
 
     try (
         Connection conn = DriverManager
             .getConnection(simpleDb.getUrl(), simpleDb.getUser(), simpleDb.getPassword());
-        PreparedStatement ps = conn.prepareStatement(sql);
+        PreparedStatement ps = conn.prepareStatement(sqlBuilder.toString());
         ResultSet rs = ps.executeQuery()
     ) {
       ResultSetMetaData meta = rs.getMetaData();
@@ -66,7 +91,7 @@ public class Sql {
       while (rs.next()) {
         Map<String, Object> row = new HashMap<>();
 
-        for(int i=1; i<=colCnt; i++) {
+        for (int i = 1; i <= colCnt; i++) {
           String colName = meta.getColumnName(i);
           Object val = rs.getObject(colName);
           row.put(colName, val);
@@ -84,17 +109,17 @@ public class Sql {
   }
 
   public int update() {
-    String sql = sqlBuilder.toString();
     try (
         Connection conn = DriverManager
             .getConnection(simpleDb.getUrl(), simpleDb.getUser(), simpleDb.getPassword());
-        PreparedStatement ps = conn.prepareStatement(sql)
+        PreparedStatement ps = conn.prepareStatement(sqlBuilder.toString())
     ) {
       for (int i = 0; i < bindParams.size(); i++) {
         ps.setObject(i + 1, bindParams.get(i));
       }
 
       ps.executeUpdate();
+
       return ps.getUpdateCount();
     } catch (SQLTimeoutException e) {
 
@@ -106,16 +131,16 @@ public class Sql {
   }
 
   public int delete() {
-    String sql = sqlBuilder.toString();
-    try (Connection conn = DriverManager.getConnection(simpleDb.getUrl(), simpleDb.getUser(),
-        simpleDb.getPassword());
-        PreparedStatement ps = conn.prepareStatement(sql)
+    try (Connection conn = DriverManager
+        .getConnection(simpleDb.getUrl(), simpleDb.getUser(), simpleDb.getPassword());
+        PreparedStatement ps = conn.prepareStatement(sqlBuilder.toString())
     ) {
       for (int i = 0; i < bindParams.size(); i++) {
         ps.setObject(i + 1, bindParams.get(i));
       }
 
       ps.executeUpdate();
+
       return ps.getUpdateCount();
     } catch (SQLTimeoutException e) {
 
