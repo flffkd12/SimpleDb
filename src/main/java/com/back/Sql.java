@@ -70,4 +70,25 @@ public class Sql {
 
     return -1;
   }
+
+  public int delete() {
+    String sql = sqlBuilder.toString();
+    try (Connection conn = DriverManager.getConnection(simpleDb.getUrl(), simpleDb.getUser(),
+        simpleDb.getPassword());
+        PreparedStatement ps = conn.prepareStatement(sql)
+    ) {
+      for (int i = 0; i < bindParams.size(); i++) {
+        ps.setObject(i + 1, bindParams.get(i));
+      }
+
+      ps.executeUpdate();
+      return ps.getUpdateCount();
+    } catch (SQLTimeoutException e) {
+
+    } catch (SQLException e) {
+
+    }
+
+    return -1;
+  }
 }
