@@ -2,6 +2,7 @@ package com.back;
 
 import com.back.simpleDb.SimpleDb;
 import java.sql.*;
+import java.time.LocalDateTime;
 import java.util.*;
 import javax.xml.transform.Result;
 
@@ -92,9 +93,7 @@ public class Sql {
         Map<String, Object> row = new HashMap<>();
 
         for (int i = 1; i <= colCnt; i++) {
-          String colName = meta.getColumnName(i);
-          Object val = rs.getObject(colName);
-          row.put(colName, val);
+          row.put(meta.getColumnName(i), rs.getObject(i));
         }
 
         rows.add(row);
@@ -106,6 +105,28 @@ public class Sql {
     }
 
     return rows;
+  }
+
+  public LocalDateTime selectDatetime() {
+    try (Connection conn = DriverManager
+        .getConnection(simpleDb.getUrl(), simpleDb.getUser(), simpleDb.getPassword());
+        PreparedStatement ps = conn.prepareStatement(sqlBuilder.toString());
+        ResultSet rs = ps.executeQuery()
+    ) {
+      if (rs.next()) {
+        Timestamp ts = rs.getTimestamp(1);
+
+        if (ts != null) {
+          return ts.toLocalDateTime();
+        }
+      }
+    } catch (SQLTimeoutException e) {
+
+    } catch (SQLException e) {
+
+    }
+
+    return null;
   }
 
   public int update() {
