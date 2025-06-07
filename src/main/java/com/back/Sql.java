@@ -132,17 +132,23 @@ public class Sql {
   public Long selectLong() {
     try (Connection conn = DriverManager
         .getConnection(simpleDb.getUrl(), simpleDb.getUser(), simpleDb.getPassword());
-        PreparedStatement ps = conn.prepareStatement(sqlBuilder.toString());
-        ResultSet rs = ps.executeQuery();
+        PreparedStatement ps = conn.prepareStatement(sqlBuilder.toString())
     ) {
-      if (rs.next()) {
-        return rs.getLong(1);
+      for (int i = 0; i < bindParams.size(); i++) {
+        ps.setObject(i + 1, bindParams.get(i));
+      }
+
+      try (ResultSet rs = ps.executeQuery()) {
+        if (rs.next()) {
+          return rs.getLong(1);
+        }
       }
     } catch (SQLTimeoutException e) {
 
     } catch (SQLException e) {
 
     }
+
     return 0L;
   }
 
@@ -181,8 +187,6 @@ public class Sql {
 
     return false;
   }
-
-
 
   public int update() {
     try (
