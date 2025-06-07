@@ -1,10 +1,10 @@
 package com.back;
 
 import com.back.simpleDb.SimpleDb;
+import com.mysql.cj.log.Log;
 import java.sql.*;
 import java.time.LocalDateTime;
 import java.util.*;
-import javax.xml.transform.Result;
 
 public class Sql {
 
@@ -22,10 +22,11 @@ public class Sql {
     return this;
   }
 
-  public void appendIn(String sql, Object... bindParam) {
+  public Sql appendIn(String sql, Object... bindParam) {
     String markerString = String.join(", ", Collections.nCopies(bindParam.length, "?"));
     sqlBuilder.append(sql.replace("?", markerString)).append("\n");
     bindParams.addAll(Arrays.asList(bindParam));
+    return this;
   }
 
   public long insert() {
@@ -156,6 +157,31 @@ public class Sql {
     }
 
     return 0L;
+  }
+
+  public List<Long> selectLongs() {
+    List<Long> longList = new ArrayList<>();
+
+    try (Connection conn = DriverManager
+        .getConnection(simpleDb.getUrl(), simpleDb.getUser(), simpleDb.getPassword());
+        PreparedStatement ps = conn.prepareStatement(sqlBuilder.toString())
+    ) {
+      for (int i = 0; i < bindParams.size(); i++) {
+        ps.setObject(i + 1, bindParams.get(i));
+      }
+
+      try (ResultSet rs = ps.executeQuery()) {
+        while (rs.next()) {
+          longList.add(rs.getLong(1));
+        }
+      }
+    } catch (SQLTimeoutException e) {
+
+    } catch (SQLException e) {
+
+    }
+
+    return longList;
   }
 
   public String selectString() {
