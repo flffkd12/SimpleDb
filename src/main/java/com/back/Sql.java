@@ -164,6 +164,25 @@ public class Sql {
     return null;
   }
 
+  public boolean selectBoolean() {
+    try (Connection conn = DriverManager
+        .getConnection(simpleDb.getUrl(), simpleDb.getUser(), simpleDb.getPassword());
+        PreparedStatement ps = conn.prepareStatement(sqlBuilder.toString());
+        ResultSet rs = ps.executeQuery();
+    ) {
+      if (rs.next()) {
+        return rs.getBoolean(1);
+      }
+    } catch (SQLTimeoutException e) {
+
+    } catch (SQLException e) {
+
+    }
+
+    return false;
+  }
+
+
 
   public int update() {
     try (
