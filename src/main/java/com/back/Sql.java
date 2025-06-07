@@ -22,6 +22,12 @@ public class Sql {
     return this;
   }
 
+  public void appendIn(String sql, Object... bindParam) {
+    String markerString = String.join(", ", Collections.nCopies(bindParam.length, "?"));
+    sqlBuilder.append(sql.replace("?", markerString)).append("\n");
+    bindParams.addAll(Arrays.asList(bindParam));
+  }
+
   public long insert() {
     try (
         Connection conn = DriverManager
