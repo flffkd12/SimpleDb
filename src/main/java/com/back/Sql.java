@@ -86,6 +86,10 @@ public class Sql {
     return row;
   }
 
+  public <T> T selectRow(Class<T> clazz) {
+    Map<String, Object> row = selectRow();
+    return new ObjectMapper().registerModule(new JavaTimeModule()).convertValue(row, clazz);
+  }
 
   public List<Map<String, Object>> selectRows() {
     List<Map<String, Object>> rows = new ArrayList<>();
@@ -118,13 +122,12 @@ public class Sql {
   }
 
   public <T> List<T> selectRows(Class<T> clazz) {
-    ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
+    ObjectMapper mapper = new ObjectMapper().registerModule(new JavaTimeModule());
     List<Map<String, Object>> rows = selectRows();
     List<T> itemList = new ArrayList<>();
 
     for (Map<String, Object> row : rows) {
-      T item = objectMapper.convertValue(row, clazz);
-      itemList.add(item);
+      itemList.add(mapper.convertValue(row, clazz));
     }
 
     return itemList;

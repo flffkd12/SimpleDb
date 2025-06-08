@@ -8,7 +8,7 @@ import lombok.Getter;
 @Getter
 public class Article {
 
-  private int id;
+  private long id;
   private LocalDateTime createdDate;
   private LocalDateTime modifiedDate;
   private String title;
