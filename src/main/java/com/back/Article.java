@@ -1,13 +1,18 @@
 package com.back;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import java.time.LocalDateTime;
+import lombok.Getter;
 
+@Getter
 public class Article {
 
-  public int id;
-  public LocalDateTime createdDate;
-  public LocalDateTime modifiedDate;
-  public String title;
-  public String body;
-  public boolean isBlind;
+  private int id;
+  private LocalDateTime createdDate;
+  private LocalDateTime modifiedDate;
+  private String title;
+  private String body;
+  @JsonProperty("isBlind")
+  private boolean isBlind;
 }

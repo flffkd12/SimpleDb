@@ -1,6 +1,8 @@
 package com.back;
 
 import com.back.simpleDb.SimpleDb;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.mysql.cj.log.Log;
 import java.sql.*;
 import java.time.LocalDateTime;
@@ -84,6 +86,7 @@ public class Sql {
     return row;
   }
 
+
   public List<Map<String, Object>> selectRows() {
     List<Map<String, Object>> rows = new ArrayList<>();
 
@@ -112,6 +115,19 @@ public class Sql {
     }
 
     return rows;
+  }
+
+  public <T> List<T> selectRows(Class<T> clazz) {
+    ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
+    List<Map<String, Object>> rows = selectRows();
+    List<T> itemList = new ArrayList<>();
+
+    for (Map<String, Object> row : rows) {
+      T item = objectMapper.convertValue(row, clazz);
+      itemList.add(item);
+    }
+
+    return itemList;
   }
 
   public LocalDateTime selectDatetime() {
