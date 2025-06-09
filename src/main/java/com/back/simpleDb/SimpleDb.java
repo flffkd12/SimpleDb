@@ -43,8 +43,8 @@ public class SimpleDb {
   }
 
   public void run(String sql, Object... params) {
-    try (Connection conn = DriverManager.getConnection(url, user, password);
-        PreparedStatement ps = conn.prepareStatement(sql)) {
+    Connection conn = getConnection();
+    try (PreparedStatement ps = conn.prepareStatement(sql)) {
       for (int i = 0; i < params.length; i++) {
         ps.setObject(i + 1, params[i]);
       }
