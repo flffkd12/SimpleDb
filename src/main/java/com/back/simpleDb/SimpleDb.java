@@ -2,6 +2,7 @@ package com.back.simpleDb;
 
 import com.back.Sql;
 import java.sql.*;
+import java.util.concurrent.TimeoutException;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -16,12 +17,29 @@ public class SimpleDb {
   private final String password;
   @Setter
   private boolean devMode = false;
+  private final ThreadLocal<Connection> threadLocalConn = new ThreadLocal<>();
 
   public SimpleDb(String host, String user, String password, String dbName) {
     this.url = "jdbc:mysql://" + host + ":3307/" + dbName
         + "?serverTimezone=Asia/Seoul&characterEncoding=utf8";
     this.user = user;
     this.password = password;
+  }
+
+  public Connection getConnection() {
+    Connection conn = threadLocalConn.get();
+
+    if (conn == null) {
+      try {
+        conn = DriverManager.getConnection(url, user, password);
+      } catch (SQLException e) {
+        throw new RuntimeException(e);
+      }
+
+      threadLocalConn.set(conn);
+    }
+
+    return conn;
   }
 
   public void run(String sql, Object... params) {
@@ -41,6 +59,20 @@ public class SimpleDb {
   }
 
   public Sql genSql() {
-    return new Sql(this);
+    return new Sql(getConnection());
+  }
+
+  public void close() {
+    Connection conn = threadLocalConn.get();
+
+    if (conn != null) {
+      try {
+        conn.close();
+      } catch (SQLException e) {
+        e.printStackTrace();
+      }
+
+      threadLocalConn.remove();
+    }
   }
 }

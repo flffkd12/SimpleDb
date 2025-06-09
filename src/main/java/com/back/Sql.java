@@ -1,21 +1,19 @@
 package com.back;
 
-import com.back.simpleDb.SimpleDb;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import com.mysql.cj.log.Log;
 import java.sql.*;
 import java.time.LocalDateTime;
 import java.util.*;
 
 public class Sql {
 
-  private final SimpleDb simpleDb;
+  private final Connection conn;
   private final StringBuilder sqlBuilder = new StringBuilder();
   private final List<Object> bindParams = new ArrayList<>();
 
-  public Sql(SimpleDb simpleDb) {
-    this.simpleDb = simpleDb;
+  public Sql(Connection conn) {
+    this.conn = conn;
   }
 
   public Sql append(String sql, Object... bindParam) {
@@ -33,8 +31,6 @@ public class Sql {
 
   public long insert() {
     try (
-        Connection conn = DriverManager
-            .getConnection(simpleDb.getUrl(), simpleDb.getUser(), simpleDb.getPassword());
         PreparedStatement ps = conn.prepareStatement(sqlBuilder.toString(),
             Statement.RETURN_GENERATED_KEYS)
     ) {
@@ -64,8 +60,6 @@ public class Sql {
     Map<String, Object> row = new HashMap<>();
 
     try (
-        Connection conn = DriverManager
-            .getConnection(simpleDb.getUrl(), simpleDb.getUser(), simpleDb.getPassword());
         PreparedStatement ps = conn.prepareStatement(sqlBuilder.toString());
         ResultSet rs = ps.executeQuery()
     ) {
@@ -95,8 +89,6 @@ public class Sql {
     List<Map<String, Object>> rows = new ArrayList<>();
 
     try (
-        Connection conn = DriverManager
-            .getConnection(simpleDb.getUrl(), simpleDb.getUser(), simpleDb.getPassword());
         PreparedStatement ps = conn.prepareStatement(sqlBuilder.toString());
         ResultSet rs = ps.executeQuery()
     ) {
@@ -134,8 +126,7 @@ public class Sql {
   }
 
   public LocalDateTime selectDatetime() {
-    try (Connection conn = DriverManager
-        .getConnection(simpleDb.getUrl(), simpleDb.getUser(), simpleDb.getPassword());
+    try (
         PreparedStatement ps = conn.prepareStatement(sqlBuilder.toString());
         ResultSet rs = ps.executeQuery()
     ) {
@@ -156,10 +147,7 @@ public class Sql {
   }
 
   public Long selectLong() {
-    try (Connection conn = DriverManager
-        .getConnection(simpleDb.getUrl(), simpleDb.getUser(), simpleDb.getPassword());
-        PreparedStatement ps = conn.prepareStatement(sqlBuilder.toString())
-    ) {
+    try (PreparedStatement ps = conn.prepareStatement(sqlBuilder.toString())) {
       for (int i = 0; i < bindParams.size(); i++) {
         ps.setObject(i + 1, bindParams.get(i));
       }
@@ -181,10 +169,7 @@ public class Sql {
   public List<Long> selectLongs() {
     List<Long> longList = new ArrayList<>();
 
-    try (Connection conn = DriverManager
-        .getConnection(simpleDb.getUrl(), simpleDb.getUser(), simpleDb.getPassword());
-        PreparedStatement ps = conn.prepareStatement(sqlBuilder.toString())
-    ) {
+    try (PreparedStatement ps = conn.prepareStatement(sqlBuilder.toString())) {
       for (int i = 0; i < bindParams.size(); i++) {
         ps.setObject(i + 1, bindParams.get(i));
       }
@@ -204,8 +189,7 @@ public class Sql {
   }
 
   public String selectString() {
-    try (Connection conn = DriverManager
-        .getConnection(simpleDb.getUrl(), simpleDb.getUser(), simpleDb.getPassword());
+    try (
         PreparedStatement ps = conn.prepareStatement(sqlBuilder.toString());
         ResultSet rs = ps.executeQuery();
     ) {
@@ -222,8 +206,7 @@ public class Sql {
   }
 
   public boolean selectBoolean() {
-    try (Connection conn = DriverManager
-        .getConnection(simpleDb.getUrl(), simpleDb.getUser(), simpleDb.getPassword());
+    try (
         PreparedStatement ps = conn.prepareStatement(sqlBuilder.toString());
         ResultSet rs = ps.executeQuery();
     ) {
@@ -240,11 +223,7 @@ public class Sql {
   }
 
   public int update() {
-    try (
-        Connection conn = DriverManager
-            .getConnection(simpleDb.getUrl(), simpleDb.getUser(), simpleDb.getPassword());
-        PreparedStatement ps = conn.prepareStatement(sqlBuilder.toString())
-    ) {
+    try (PreparedStatement ps = conn.prepareStatement(sqlBuilder.toString())) {
       for (int i = 0; i < bindParams.size(); i++) {
         ps.setObject(i + 1, bindParams.get(i));
       }
@@ -262,10 +241,7 @@ public class Sql {
   }
 
   public int delete() {
-    try (Connection conn = DriverManager
-        .getConnection(simpleDb.getUrl(), simpleDb.getUser(), simpleDb.getPassword());
-        PreparedStatement ps = conn.prepareStatement(sqlBuilder.toString())
-    ) {
+    try (PreparedStatement ps = conn.prepareStatement(sqlBuilder.toString())) {
       for (int i = 0; i < bindParams.size(); i++) {
         ps.setObject(i + 1, bindParams.get(i));
       }
