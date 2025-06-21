@@ -124,42 +124,12 @@ public class Sql {
   }
 
   public LocalDateTime selectDatetime() {
-    try (
-        PreparedStatement ps = conn.prepareStatement(sqlBuilder.toString());
-        ResultSet rs = ps.executeQuery()
-    ) {
-      if (rs.next()) {
-        Timestamp ts = rs.getTimestamp(1);
-
-        if (ts != null) {
-          return ts.toLocalDateTime();
-        }
-      }
-    } catch (SQLTimeoutException e) {
-
-    } catch (SQLException e) {
-
-    }
-
-    return null;
+    return executeSql(LocalDateTime.class);
   }
 
   public Long selectLong() {
-    try (PreparedStatement ps = conn.prepareStatement(sqlBuilder.toString())) {
-      bindParameters(ps);
-
-      try (ResultSet rs = ps.executeQuery()) {
-        if (rs.next()) {
-          return rs.getLong(1);
-        }
-      }
-    } catch (SQLTimeoutException e) {
-
-    } catch (SQLException e) {
-
-    }
-
-    return 0L;
+    Long result = executeSql(Long.class);
+    return result != null ? result : 0L;
   }
 
   public List<Long> selectLongs() {
@@ -182,20 +152,7 @@ public class Sql {
   }
 
   public String selectString() {
-    try (
-        PreparedStatement ps = conn.prepareStatement(sqlBuilder.toString());
-        ResultSet rs = ps.executeQuery();
-    ) {
-      if (rs.next()) {
-        return rs.getString(1);
-      }
-    } catch (SQLTimeoutException e) {
-
-    } catch (SQLException e) {
-
-    }
-
-    return null;
+    return executeSql(String.class);
   }
 
   public Boolean selectBoolean() {
@@ -214,17 +171,30 @@ public class Sql {
 
   private <T> T executeSql(Class<T> clazz) {
     String sql = sqlBuilder.toString();
+
     try (PreparedStatement ps = conn.prepareStatement(sql)) {
       bindParameters(ps);
 
-      if (clazz == Boolean.class) {
+      if (sql.startsWith("SELECT")) {
         ResultSet rs = ps.executeQuery();
         if (rs.next()) {
-          return (T) (Boolean) rs.getBoolean(1);
+          if (clazz == Boolean.class) {
+            return (T) (Boolean) rs.getBoolean(1);
+          } else if (clazz == String.class) {
+            return (T) rs.getString(1);
+          } else if (clazz == Long.class) {
+            return (T) (Long) rs.getLong(1);
+          } else if (clazz == LocalDateTime.class) {
+            Timestamp ts = rs.getTimestamp(1);
+
+            if (ts != null) {
+              return (T) ts.toLocalDateTime();
+            }
+          }
         }
       }
 
-      return (T) Integer.valueOf(ps.executeUpdate());
+      return (T) (Integer) ps.executeUpdate();
     } catch (SQLTimeoutException e) {
       return null;
     } catch (SQLException e) {
