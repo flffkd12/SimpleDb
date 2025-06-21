@@ -84,31 +84,7 @@ public class Sql {
   }
 
   public List<Map<String, Object>> selectRows() {
-    List<Map<String, Object>> rows = new ArrayList<>();
-
-    try (
-        PreparedStatement ps = conn.prepareStatement(sqlBuilder.toString());
-        ResultSet rs = ps.executeQuery()
-    ) {
-      ResultSetMetaData meta = rs.getMetaData();
-      int colCnt = meta.getColumnCount();
-
-      while (rs.next()) {
-        Map<String, Object> row = new HashMap<>();
-
-        for (int i = 1; i <= colCnt; i++) {
-          row.put(meta.getColumnName(i), rs.getObject(i));
-        }
-
-        rows.add(row);
-      }
-    } catch (SQLTimeoutException e) {
-
-    } catch (SQLException e) {
-
-    }
-
-    return rows;
+    return executeSql(List.class, Map.class);
   }
 
   public <T> List<T> selectRows(Class<T> clazz) {
@@ -133,22 +109,7 @@ public class Sql {
   }
 
   public List<Long> selectLongs() {
-    List<Long> longList = new ArrayList<>();
-
-    try (PreparedStatement ps = conn.prepareStatement(sqlBuilder.toString())) {
-      bindParameters(ps);
-      try (ResultSet rs = ps.executeQuery()) {
-        while (rs.next()) {
-          longList.add(rs.getLong(1));
-        }
-      }
-    } catch (SQLTimeoutException e) {
-
-    } catch (SQLException e) {
-
-    }
-
-    return longList;
+    return executeSql(List.class, Long.class);
   }
 
   public String selectString() {
@@ -170,6 +131,10 @@ public class Sql {
   }
 
   private <T> T executeSql(Class<T> clazz) {
+    return executeSql(clazz, null);
+  }
+
+  private <T, E> T executeSql(Class<T> clazz, Class<E> listType) {
     String sql = sqlBuilder.toString();
 
     try (PreparedStatement ps = conn.prepareStatement(sql)) {
@@ -189,6 +154,31 @@ public class Sql {
 
             if (ts != null) {
               return (T) ts.toLocalDateTime();
+            }
+          } else if (clazz == List.class) {
+            if (listType == Long.class) {
+              List<Long> longList = new ArrayList<>();
+
+              do {
+                longList.add(rs.getLong(1));
+              } while (rs.next());
+              return (T) longList;
+            } else if (listType == Map.class) {
+              List<Map<String, Object>> rows = new ArrayList<>();
+
+              do {
+                Map<String, Object> row = new HashMap<>();
+                ResultSetMetaData meta = rs.getMetaData();
+                int colCnt = meta.getColumnCount();
+
+                for (int i = 1; i <= colCnt; i++) {
+                  row.put(meta.getColumnName(i), rs.getObject(i));
+                }
+
+                rows.add(row);
+              } while (rs.next());
+
+              return (T) rows;
             }
           }
         }
