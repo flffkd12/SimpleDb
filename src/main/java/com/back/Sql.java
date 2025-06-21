@@ -198,44 +198,38 @@ public class Sql {
     return null;
   }
 
-  public boolean selectBoolean() {
-    try (
-        PreparedStatement ps = conn.prepareStatement(sqlBuilder.toString());
-        ResultSet rs = ps.executeQuery();
-    ) {
-      if (rs.next()) {
-        return rs.getBoolean(1);
-      }
-    } catch (SQLTimeoutException e) {
-
-    } catch (SQLException e) {
-
-    }
-
-    return false;
+  public Boolean selectBoolean() {
+    return executeSql(Boolean.class);
   }
 
   public int update() {
-    return executeSql();
+    Integer result = executeSql(Integer.class);
+    return result != null ? result : 0;
   }
 
   public int delete() {
-    return executeSql();
+    Integer result = executeSql(Integer.class);
+    return result != null ? result : 0;
   }
 
-  private int executeSql() {
-    try (PreparedStatement ps = conn.prepareStatement(sqlBuilder.toString())) {
+  private <T> T executeSql(Class<T> clazz) {
+    String sql = sqlBuilder.toString();
+    try (PreparedStatement ps = conn.prepareStatement(sql)) {
       bindParameters(ps);
-      ps.executeUpdate();
 
-      return ps.getUpdateCount();
+      if (clazz == Boolean.class) {
+        ResultSet rs = ps.executeQuery();
+        if (rs.next()) {
+          return (T) (Boolean) rs.getBoolean(1);
+        }
+      }
+
+      return (T) Integer.valueOf(ps.executeUpdate());
     } catch (SQLTimeoutException e) {
-
+      return null;
     } catch (SQLException e) {
-
+      return null;
     }
-
-    return -1;
   }
 
   private void bindParameters(PreparedStatement ps) throws SQLException {
@@ -243,5 +237,4 @@ public class Sql {
       ps.setObject(i + 1, bindParams.get(i));
     }
   }
-
 }
