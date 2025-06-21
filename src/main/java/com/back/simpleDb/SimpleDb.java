@@ -92,6 +92,18 @@ public class SimpleDb {
     }
   }
 
+  public void commit() {
+    Connection conn = getConnection();
+
+    try {
+      conn.commit();
+      conn.setAutoCommit(true);
+      isInTransaction = false;
+    } catch (SQLException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
   public void rollback() {
     Connection conn = getConnection();
 
