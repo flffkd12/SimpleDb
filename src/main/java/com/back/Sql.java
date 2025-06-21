@@ -29,15 +29,13 @@ public class Sql {
     return this;
   }
 
+
   public long insert() {
     try (
         PreparedStatement ps = conn.prepareStatement(sqlBuilder.toString(),
             Statement.RETURN_GENERATED_KEYS)
     ) {
-      for (int i = 0; i < bindParams.size(); i++) {
-        ps.setObject(i + 1, bindParams.get(i));
-      }
-
+      bindParameters(ps);
       ps.executeUpdate();
 
       try (ResultSet rs = ps.getGeneratedKeys()) {
@@ -148,9 +146,7 @@ public class Sql {
 
   public Long selectLong() {
     try (PreparedStatement ps = conn.prepareStatement(sqlBuilder.toString())) {
-      for (int i = 0; i < bindParams.size(); i++) {
-        ps.setObject(i + 1, bindParams.get(i));
-      }
+      bindParameters(ps);
 
       try (ResultSet rs = ps.executeQuery()) {
         if (rs.next()) {
@@ -170,10 +166,7 @@ public class Sql {
     List<Long> longList = new ArrayList<>();
 
     try (PreparedStatement ps = conn.prepareStatement(sqlBuilder.toString())) {
-      for (int i = 0; i < bindParams.size(); i++) {
-        ps.setObject(i + 1, bindParams.get(i));
-      }
-
+      bindParameters(ps);
       try (ResultSet rs = ps.executeQuery()) {
         while (rs.next()) {
           longList.add(rs.getLong(1));
@@ -222,14 +215,18 @@ public class Sql {
     return false;
   }
 
+
+  private void bindParameters(PreparedStatement ps) throws SQLException {
+    for (int i = 0; i < bindParams.size(); i++) {
+      ps.setObject(i + 1, bindParams.get(i));
+    }
+  }
+
+
   public int update() {
     try (PreparedStatement ps = conn.prepareStatement(sqlBuilder.toString())) {
-      for (int i = 0; i < bindParams.size(); i++) {
-        ps.setObject(i + 1, bindParams.get(i));
-      }
-
+      bindParameters(ps);
       ps.executeUpdate();
-
       return ps.getUpdateCount();
     } catch (SQLTimeoutException e) {
 
@@ -242,12 +239,8 @@ public class Sql {
 
   public int delete() {
     try (PreparedStatement ps = conn.prepareStatement(sqlBuilder.toString())) {
-      for (int i = 0; i < bindParams.size(); i++) {
-        ps.setObject(i + 1, bindParams.get(i));
-      }
-
+      bindParameters(ps);
       ps.executeUpdate();
-
       return ps.getUpdateCount();
     } catch (SQLTimeoutException e) {
 

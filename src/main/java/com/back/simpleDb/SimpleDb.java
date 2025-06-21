@@ -2,7 +2,6 @@ package com.back.simpleDb;
 
 import com.back.Sql;
 import java.sql.*;
-import java.util.concurrent.TimeoutException;
 import lombok.Getter;
 import lombok.Setter;
 
