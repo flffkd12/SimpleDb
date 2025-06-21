@@ -215,6 +215,28 @@ public class Sql {
     return false;
   }
 
+  public int update() {
+    return executeSql();
+  }
+
+  public int delete() {
+    return executeSql();
+  }
+
+  private int executeSql() {
+    try (PreparedStatement ps = conn.prepareStatement(sqlBuilder.toString())) {
+      bindParameters(ps);
+      ps.executeUpdate();
+
+      return ps.getUpdateCount();
+    } catch (SQLTimeoutException e) {
+
+    } catch (SQLException e) {
+
+    }
+
+    return -1;
+  }
 
   private void bindParameters(PreparedStatement ps) throws SQLException {
     for (int i = 0; i < bindParams.size(); i++) {
@@ -222,32 +244,4 @@ public class Sql {
     }
   }
 
-
-  public int update() {
-    try (PreparedStatement ps = conn.prepareStatement(sqlBuilder.toString())) {
-      bindParameters(ps);
-      ps.executeUpdate();
-      return ps.getUpdateCount();
-    } catch (SQLTimeoutException e) {
-
-    } catch (SQLException e) {
-
-    }
-
-    return -1;
-  }
-
-  public int delete() {
-    try (PreparedStatement ps = conn.prepareStatement(sqlBuilder.toString())) {
-      bindParameters(ps);
-      ps.executeUpdate();
-      return ps.getUpdateCount();
-    } catch (SQLTimeoutException e) {
-
-    } catch (SQLException e) {
-
-    }
-
-    return -1;
-  }
 }
