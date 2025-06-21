@@ -17,6 +17,7 @@ public class SimpleDb {
   private final String password;
   @Setter
   private boolean devMode = false;
+  private boolean isInTransaction = false;
   private final ThreadLocal<Connection> threadLocalConn = new ThreadLocal<>();
 
   public SimpleDb(String host, String user, String password, String dbName) {
@@ -73,6 +74,33 @@ public class SimpleDb {
       }
 
       threadLocalConn.remove();
+    }
+  }
+
+  public void startTransaction() {
+    if (isInTransaction) {
+      return;
+    }
+
+    Connection conn = getConnection();
+
+    try {
+      conn.setAutoCommit(false);
+      isInTransaction = true;
+    } catch (SQLException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  public void rollback() {
+    Connection conn = getConnection();
+
+    try {
+      conn.rollback();
+      conn.setAutoCommit(true);
+      isInTransaction = false;
+    } catch (SQLException e) {
+      throw new RuntimeException(e);
     }
   }
 }
