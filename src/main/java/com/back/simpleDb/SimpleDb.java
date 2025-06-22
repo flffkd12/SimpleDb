@@ -1,11 +1,15 @@
 package com.back.simpleDb;
 
 import com.back.Sql;
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
 import lombok.Getter;
 import lombok.Setter;
+import org.junit.platform.commons.logging.Logger;
+import org.junit.platform.commons.logging.LoggerFactory;
 
-// SimpleDb에 관한 기본 정보를 담고 초기화해놓는 클래스
 public class SimpleDb {
 
   @Getter
@@ -16,8 +20,10 @@ public class SimpleDb {
   private final String password;
   @Setter
   private boolean devMode = false;
+
   private boolean isInTransaction = false;
   private final ThreadLocal<Connection> threadLocalConn = new ThreadLocal<>();
+  private final Logger logger = LoggerFactory.getLogger(SimpleDb.class);
 
   public SimpleDb(String host, String user, String password, String dbName) {
     this.url = "jdbc:mysql://" + host + ":3307/" + dbName
@@ -37,20 +43,21 @@ public class SimpleDb {
       threadLocalConn.set(conn);
       return conn;
     } catch (SQLException e) {
-      throw new RuntimeException(e);
+      logger.error(() -> String.format("DB connection failed: %s, url: %s, user: %s",
+          e.getMessage(), url, user));
+      throw new RuntimeException("DB connection failed", e);
     }
   }
 
   public void run(String sql, Object... params) {
     Connection conn = getConnection();
+
     try (PreparedStatement ps = conn.prepareStatement(sql)) {
       for (int i = 0; i < params.length; i++) {
         ps.setObject(i + 1, params[i]);
       }
 
       ps.executeUpdate();
-    } catch (SQLTimeoutException e) {
-      throw new RuntimeException(e);
     } catch (SQLException e) {
       e.printStackTrace();
       throw new RuntimeException(e);
