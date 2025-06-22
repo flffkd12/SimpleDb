@@ -5,6 +5,7 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import java.util.Arrays;
 import lombok.Getter;
 import lombok.Setter;
 import org.junit.platform.commons.logging.Logger;
@@ -59,8 +60,9 @@ public class SimpleDb {
 
       ps.executeUpdate();
     } catch (SQLException e) {
-      e.printStackTrace();
-      throw new RuntimeException(e);
+      logger.error(e, () -> String.format("SQL execution failed: %s, SQL: %s, bindParams: %s",
+          e.getMessage(), sql, Arrays.toString(params)));
+      throw new RuntimeException("SQL execution failed", e);
     }
   }
 
@@ -78,7 +80,7 @@ public class SimpleDb {
       conn.close();
       threadLocalConn.remove();
     } catch (SQLException e) {
-      e.printStackTrace();
+      logger.error(e, () -> String.format("Failed to close DB connection: %s", e.getMessage()));
     }
   }
 
@@ -92,7 +94,8 @@ public class SimpleDb {
       conn.setAutoCommit(false);
       isInTransaction = true;
     } catch (SQLException e) {
-      throw new RuntimeException(e);
+      logger.error(e, () -> String.format("Failed to set auto commit: %s", e.getMessage()));
+      throw new RuntimeException("Failed to start transaction", e);
     }
   }
 
@@ -104,7 +107,8 @@ public class SimpleDb {
       conn.setAutoCommit(true);
       isInTransaction = false;
     } catch (SQLException e) {
-      throw new RuntimeException(e);
+      logger.error(e, () -> String.format("Failed to commit: %s", e.getMessage()));
+      throw new RuntimeException("Failed to commit", e);
     }
   }
 
@@ -116,7 +120,8 @@ public class SimpleDb {
       conn.setAutoCommit(true);
       isInTransaction = false;
     } catch (SQLException e) {
-      throw new RuntimeException(e);
+      logger.error(e, () -> String.format("Failed to rollback: %s", e.getMessage()));
+      throw new RuntimeException("Failed to commit", e);
     }
   }
 }
