@@ -5,12 +5,14 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import java.sql.*;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class Sql {
 
   private final Connection conn;
   private final StringBuilder sqlBuilder = new StringBuilder();
   private final List<Object> bindParams = new ArrayList<>();
+  private final ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
 
   public Sql(Connection conn) {
     this.conn = conn;
@@ -29,58 +31,16 @@ public class Sql {
     return this;
   }
 
-
   public long insert() {
-    try (
-        PreparedStatement ps = conn.prepareStatement(sqlBuilder.toString(),
-            Statement.RETURN_GENERATED_KEYS)
-    ) {
-      bindParameters(ps);
-      ps.executeUpdate();
-
-      try (ResultSet rs = ps.getGeneratedKeys()) {
-        if (rs.next()) {
-          return rs.getLong(1);
-        }
-      }
-    } catch (SQLFeatureNotSupportedException e) {
-
-    } catch (SQLTimeoutException e) {
-
-    } catch (SQLException e) {
-      throw new RuntimeException(e);
-    }
-
-    return 0;
+    return executeSql(Long.class);
   }
 
   public Map<String, Object> selectRow() {
-    Map<String, Object> row = new HashMap<>();
-
-    try (
-        PreparedStatement ps = conn.prepareStatement(sqlBuilder.toString());
-        ResultSet rs = ps.executeQuery()
-    ) {
-      if (rs.next()) {
-        ResultSetMetaData meta = rs.getMetaData();
-        int colCnt = meta.getColumnCount();
-
-        for (int i = 1; i <= colCnt; i++) {
-          row.put(meta.getColumnName(i), rs.getObject(i));
-        }
-      }
-    } catch (SQLTimeoutException e) {
-
-    } catch (SQLException e) {
-
-    }
-
-    return row;
+    return executeSql(Map.class);
   }
 
   public <T> T selectRow(Class<T> clazz) {
-    Map<String, Object> row = selectRow();
-    return new ObjectMapper().registerModule(new JavaTimeModule()).convertValue(row, clazz);
+    return objectMapper.convertValue(selectRow(), clazz);
   }
 
   public List<Map<String, Object>> selectRows() {
@@ -88,15 +48,9 @@ public class Sql {
   }
 
   public <T> List<T> selectRows(Class<T> clazz) {
-    ObjectMapper mapper = new ObjectMapper().registerModule(new JavaTimeModule());
-    List<Map<String, Object>> rows = selectRows();
-    List<T> itemList = new ArrayList<>();
-
-    for (Map<String, Object> row : rows) {
-      itemList.add(mapper.convertValue(row, clazz));
-    }
-
-    return itemList;
+    return selectRows().stream()
+        .map(row -> objectMapper.convertValue(row, clazz))
+        .collect(Collectors.toList());
   }
 
   public LocalDateTime selectDatetime() {
@@ -137,6 +91,28 @@ public class Sql {
   private <T, E> T executeSql(Class<T> clazz, Class<E> listType) {
     String sql = sqlBuilder.toString();
 
+    if (sql.startsWith("INSERT")) {
+      try (
+          PreparedStatement ps = conn.prepareStatement(sqlBuilder.toString(),
+              Statement.RETURN_GENERATED_KEYS)
+      ) {
+        bindParameters(ps);
+        ps.executeUpdate();
+
+        try (ResultSet rs = ps.getGeneratedKeys()) {
+          if (rs.next()) {
+            return (T) (Long) rs.getLong(1);
+          }
+        }
+      } catch (SQLFeatureNotSupportedException e) {
+        return (T) (Long) 0L;
+      } catch (SQLTimeoutException e) {
+        return (T) (Long) 0L;
+      } catch (SQLException e) {
+        return (T) (Long) 0L;
+      }
+    }
+
     try (PreparedStatement ps = conn.prepareStatement(sql)) {
       bindParameters(ps);
 
@@ -155,6 +131,8 @@ public class Sql {
             if (ts != null) {
               return (T) ts.toLocalDateTime();
             }
+          } else if (clazz == Map.class) {
+            return (T) mapResultSet(rs);
           } else if (clazz == List.class) {
             if (listType == Long.class) {
               List<Long> longList = new ArrayList<>();
@@ -167,15 +145,7 @@ public class Sql {
               List<Map<String, Object>> rows = new ArrayList<>();
 
               do {
-                Map<String, Object> row = new HashMap<>();
-                ResultSetMetaData meta = rs.getMetaData();
-                int colCnt = meta.getColumnCount();
-
-                for (int i = 1; i <= colCnt; i++) {
-                  row.put(meta.getColumnName(i), rs.getObject(i));
-                }
-
-                rows.add(row);
+                rows.add(mapResultSet(rs));
               } while (rs.next());
 
               return (T) rows;
@@ -190,6 +160,18 @@ public class Sql {
     } catch (SQLException e) {
       return null;
     }
+  }
+
+  private Map<String, Object> mapResultSet(ResultSet rs) throws SQLException {
+    Map<String, Object> row = new HashMap<>();
+    ResultSetMetaData meta = rs.getMetaData();
+    int colCnt = meta.getColumnCount();
+
+    for (int i = 1; i <= colCnt; i++) {
+      row.put(meta.getColumnName(i), rs.getObject(i));
+    }
+
+    return row;
   }
 
   private void bindParameters(PreparedStatement ps) throws SQLException {
