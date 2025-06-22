@@ -32,11 +32,10 @@ public class SimpleDb {
     if (conn == null) {
       try {
         conn = DriverManager.getConnection(url, user, password);
+        threadLocalConn.set(conn);
       } catch (SQLException e) {
         throw new RuntimeException(e);
       }
-
-      threadLocalConn.set(conn);
     }
 
     return conn;
@@ -68,11 +67,10 @@ public class SimpleDb {
     if (conn != null) {
       try {
         conn.close();
+        threadLocalConn.remove();
       } catch (SQLException e) {
         e.printStackTrace();
       }
-
-      threadLocalConn.remove();
     }
   }
 
