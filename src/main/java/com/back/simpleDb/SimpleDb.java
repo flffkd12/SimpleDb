@@ -29,16 +29,16 @@ public class SimpleDb {
   public Connection getConnection() {
     Connection conn = threadLocalConn.get();
 
-    if (conn == null) {
-      try {
-        conn = DriverManager.getConnection(url, user, password);
-        threadLocalConn.set(conn);
-      } catch (SQLException e) {
-        throw new RuntimeException(e);
-      }
-    }
+    if (conn != null)
+      return conn;
 
-    return conn;
+    try {
+      conn = DriverManager.getConnection(url, user, password);
+      threadLocalConn.set(conn);
+      return conn;
+    } catch (SQLException e) {
+      throw new RuntimeException(e);
+    }
   }
 
   public void run(String sql, Object... params) {
@@ -64,20 +64,20 @@ public class SimpleDb {
   public void close() {
     Connection conn = threadLocalConn.get();
 
-    if (conn != null) {
-      try {
-        conn.close();
-        threadLocalConn.remove();
-      } catch (SQLException e) {
-        e.printStackTrace();
-      }
+    if (conn == null)
+      return;
+
+    try {
+      conn.close();
+      threadLocalConn.remove();
+    } catch (SQLException e) {
+      e.printStackTrace();
     }
   }
 
   public void startTransaction() {
-    if (isInTransaction) {
+    if (isInTransaction)
       return;
-    }
 
     Connection conn = getConnection();
 
