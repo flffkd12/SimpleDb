@@ -117,7 +117,9 @@ public class Sql {
 
       return (T) (Integer) ps.executeUpdate();
     } catch (SQLException e) {
-      return null;  //여기
+      logger.error(e, () -> "SQL execution failed: %s, SQL: %s, clazz: %s, listType: %s"
+          .formatted(e.getMessage(), sql, clazz, listType));
+      throw new RuntimeException("SQL execution failed", e);
     }
   }
 
