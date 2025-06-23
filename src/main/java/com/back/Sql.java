@@ -5,7 +5,10 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import java.sql.*;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
+import org.junit.platform.commons.logging.Logger;
+import org.junit.platform.commons.logging.LoggerFactory;
 
 public class Sql {
 
@@ -13,6 +16,7 @@ public class Sql {
   private final StringBuilder sqlBuilder = new StringBuilder();
   private final List<Object> bindParams = new ArrayList<>();
   private final ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
+  private final Logger logger = LoggerFactory.getLogger(Sql.class);
 
   public Sql(Connection conn) {
     this.conn = conn;
@@ -75,13 +79,17 @@ public class Sql {
   }
 
   public int update() {
-    Integer result = executeSql(Integer.class);
+    Integer result = executeSql();
     return result != null ? result : 0;
   }
 
   public int delete() {
-    Integer result = executeSql(Integer.class);
+    Integer result = executeSql();
     return result != null ? result : 0;
+  }
+
+  private <T> T executeSql() {
+    return executeSql(null, null);
   }
 
   private <T> T executeSql(Class<T> clazz) {
@@ -91,75 +99,93 @@ public class Sql {
   private <T, E> T executeSql(Class<T> clazz, Class<E> listType) {
     String sql = sqlBuilder.toString();
 
-    if (sql.startsWith("INSERT")) {
-      try (
-          PreparedStatement ps = conn.prepareStatement(sqlBuilder.toString(),
-              Statement.RETURN_GENERATED_KEYS)
-      ) {
-        bindParameters(ps);
-        ps.executeUpdate();
+    try (PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+      bindParameters(ps);
 
+      if (sql.startsWith("INSERT")) {
+        ps.executeUpdate();
         try (ResultSet rs = ps.getGeneratedKeys()) {
           if (rs.next()) {
             return (T) (Long) rs.getLong(1);
           }
         }
-      } catch (SQLFeatureNotSupportedException e) {
-        return (T) (Long) 0L;
-      } catch (SQLTimeoutException e) {
-        return (T) (Long) 0L;
-      } catch (SQLException e) {
-        return (T) (Long) 0L;
       }
-    }
-
-    try (PreparedStatement ps = conn.prepareStatement(sql)) {
-      bindParameters(ps);
 
       if (sql.startsWith("SELECT")) {
-        ResultSet rs = ps.executeQuery();
-        if (rs.next()) {
-          if (clazz == Boolean.class) {
-            return (T) (Boolean) rs.getBoolean(1);
-          } else if (clazz == String.class) {
-            return (T) rs.getString(1);
-          } else if (clazz == Long.class) {
-            return (T) (Long) rs.getLong(1);
-          } else if (clazz == LocalDateTime.class) {
-            Timestamp ts = rs.getTimestamp(1);
-
-            if (ts != null) {
-              return (T) ts.toLocalDateTime();
-            }
-          } else if (clazz == Map.class) {
-            return (T) mapResultSet(rs);
-          } else if (clazz == List.class) {
-            if (listType == Long.class) {
-              List<Long> longList = new ArrayList<>();
-
-              do {
-                longList.add(rs.getLong(1));
-              } while (rs.next());
-              return (T) longList;
-            } else if (listType == Map.class) {
-              List<Map<String, Object>> rows = new ArrayList<>();
-
-              do {
-                rows.add(mapResultSet(rs));
-              } while (rs.next());
-
-              return (T) rows;
-            }
-          }
-        }
+        return parseResultSet(ps.executeQuery(), clazz, listType);
       }
 
       return (T) (Integer) ps.executeUpdate();
-    } catch (SQLTimeoutException e) {
-      return null;
     } catch (SQLException e) {
-      return null;
+      return null;  //여기
     }
+  }
+
+  private <T, E> T parseResultSet(
+      ResultSet rs,
+      Class<T> clazz,
+      Class<E> listType
+  ) throws SQLException {
+    if (!rs.next())
+      throw new NoSuchElementException("No result for select query");
+
+    return switch (clazz.getSimpleName()) {
+      case "Boolean" -> (T) (Boolean) rs.getBoolean(1);
+      case "Long" -> (T) (Long) rs.getLong(1);
+      case "String" -> (T) rs.getString(1);
+      case "Map" -> (T) mapResultSet(rs);
+      case "LocalDateTime" -> (T) rs.getTimestamp(1).toLocalDateTime();
+      case "List" -> {
+        switch (listType.getSimpleName()) {
+          case "Long" ->// (T) getListFromResultSet(rs, resultSet -> resultSet.getLong(1));
+
+          {
+            List<Long> longList = new ArrayList<>();
+
+            do {
+              longList.add(rs.getLong(1));
+            } while (rs.next());
+
+            yield (T) longList;
+          }
+
+          case "Map" -> //(T) getListFromResultSet(rs, resultSet -> mapResultSet(resultSet));
+
+          {
+            List<Map<String, Object>> rows = new ArrayList<>();
+
+            do {
+              rows.add(mapResultSet(rs));
+            } while (rs.next());
+
+            yield (T) rows;
+          }
+
+          default -> {
+            IllegalStateException e = new IllegalStateException("Unexpected class value");
+            logger.error(e, () ->
+                "Unexpected listType value: %s".formatted(listType.getSimpleName()));
+            throw e;
+          }
+        }
+      }
+      default -> {
+        IllegalStateException e = new IllegalStateException("Unexpected class value");
+        logger.error(e, () -> "Unexpected clazz value: %s".formatted(clazz.getSimpleName()));
+        throw e;
+      }
+    };
+  }
+
+  private <T> List<T> getListFromResultSet(
+      ResultSet rs,
+      Function<ResultSet, T> mapper
+  ) throws SQLException {
+    List<T> list = new ArrayList<>();
+    do {
+      list.add(mapper.apply(rs));
+    } while (rs.next());
+    return list;
   }
 
   private Map<String, Object> mapResultSet(ResultSet rs) throws SQLException {
