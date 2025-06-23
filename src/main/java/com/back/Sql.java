@@ -5,7 +5,6 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import java.sql.*;
 import java.time.LocalDateTime;
 import java.util.*;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.junit.platform.commons.logging.Logger;
 import org.junit.platform.commons.logging.LoggerFactory;
@@ -137,40 +136,16 @@ public class Sql {
       case "String" -> (T) rs.getString(1);
       case "Map" -> (T) mapResultSet(rs);
       case "LocalDateTime" -> (T) rs.getTimestamp(1).toLocalDateTime();
-      case "List" -> {
-        switch (listType.getSimpleName()) {
-          case "Long" ->// (T) getListFromResultSet(rs, resultSet -> resultSet.getLong(1));
-
-          {
-            List<Long> longList = new ArrayList<>();
-
-            do {
-              longList.add(rs.getLong(1));
-            } while (rs.next());
-
-            yield (T) longList;
-          }
-
-          case "Map" -> //(T) getListFromResultSet(rs, resultSet -> mapResultSet(resultSet));
-
-          {
-            List<Map<String, Object>> rows = new ArrayList<>();
-
-            do {
-              rows.add(mapResultSet(rs));
-            } while (rs.next());
-
-            yield (T) rows;
-          }
-
-          default -> {
-            IllegalStateException e = new IllegalStateException("Unexpected class value");
-            logger.error(e, () ->
-                "Unexpected listType value: %s".formatted(listType.getSimpleName()));
-            throw e;
-          }
+      case "List" -> switch (listType.getSimpleName()) {
+        case "Long" -> (T) getListFromResultSet(rs, resultSet -> resultSet.getLong(1));
+        case "Map" -> (T) getListFromResultSet(rs, this::mapResultSet);
+        default -> {
+          IllegalStateException e = new IllegalStateException("Unexpected class value");
+          logger.error(e, () ->
+              "Unexpected listType value: %s".formatted(listType.getSimpleName()));
+          throw e;
         }
-      }
+      };
       default -> {
         IllegalStateException e = new IllegalStateException("Unexpected class value");
         logger.error(e, () -> "Unexpected clazz value: %s".formatted(clazz.getSimpleName()));
@@ -181,7 +156,7 @@ public class Sql {
 
   private <T> List<T> getListFromResultSet(
       ResultSet rs,
-      Function<ResultSet, T> mapper
+      SQLExceptionFunction<ResultSet, T> mapper
   ) throws SQLException {
     List<T> list = new ArrayList<>();
     do {
