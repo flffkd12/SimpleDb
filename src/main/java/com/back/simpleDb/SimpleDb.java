@@ -1,6 +1,5 @@
 package com.back.simpleDb;
 
-import com.back.Sql;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;

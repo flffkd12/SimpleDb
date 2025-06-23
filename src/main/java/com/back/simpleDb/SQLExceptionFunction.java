@@ -1,4 +1,4 @@
-package com.back;
+package com.back.simpleDb;
 
 import java.sql.SQLException;
 

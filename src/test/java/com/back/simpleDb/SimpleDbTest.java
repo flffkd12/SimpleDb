@@ -2,8 +2,7 @@ package com.back.simpleDb;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.back.Article;
-import com.back.Sql;
+import com.back.model.Article;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.Arrays;

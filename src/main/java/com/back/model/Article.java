@@ -1,4 +1,4 @@
-package com.back;
+package com.back.model;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.time.LocalDateTime;
